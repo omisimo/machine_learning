@@ -1,0 +1,137 @@
+---
+title: "kmean"
+author: "Omar Díaz Landa"
+date: "30 de noviembre de 2015"
+output: html_document
+---
+
+## Tamaño de cada cluster generado con kmeans
+
+Tomamos los datos de abalone y generamos el modelo de k-medias con 3 centros
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+library(dplyr)
+library(C50)
+library(class)
+library(caret)
+library(rpart)
+library(party)
+
+abalone <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data",header=F)
+names(abalone) <- c("sex","length","diameter","height","whole_wheight","shucked_weight","viscera_weight","shell_weight","rings")
+
+```
+
+Observamos la posición de los centros y el tamaño de cada cluster
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+
+
+kmean.outs <- kmeans(select(abalone, -sex), 3)
+abalone$cluster <- kmean.outs$cluster
+table(abalone$cluster)
+
+
+kmean.outs$centers
+plot(kmean.outs$centers)
+```
+
+
+Ajustamos un arbol de regresión en cada uno de los clusters
+
+
+### Cluster 1
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+##########################
+## arbol 1 
+cluster1 <- filter(abalone, cluster==1)
+cluster1 <- select(cluster1, -cluster)
+
+#set train y test
+set.seed(114041)
+rows.seq <- seq(1,dim(cluster1)[1])
+train.rows <- sample(rows.seq, dim(cluster1)[1]*.75, replace=F)
+
+train.data <- cluster1[train.rows, ]
+test.data <- cluster1[-train.rows, ]
+
+cluster1 <- ctree(sex ~ .,data=train.data)
+plot(cluster1,type="simple")
+
+#test
+tree.test <- predict(cluster1, newdata=test.data)
+confusionMatrix(tree.test, test.data$sex)
+
+```
+
+### Cluster 2
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+##########################
+## arbol 1 
+cluster2 <- filter(abalone, cluster==2)
+cluster2 <- select(cluster2, -cluster)
+
+#set train y test
+set.seed(114041)
+rows.seq <- seq(1,dim(cluster2)[1])
+train.rows <- sample(rows.seq, dim(cluster2)[1]*.75, replace=F)
+
+train.data <- cluster2[train.rows, ]
+test.data <- cluster2[-train.rows, ]
+
+cluster2 <- ctree(sex ~ .,data=train.data)
+plot(cluster2,type="simple")
+
+#test
+tree.test <- predict(cluster2, newdata=test.data)
+confusionMatrix(tree.test, test.data$sex)
+
+```
+
+### Cluster 3
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+##########################
+## arbol 3
+cluster3 <- filter(abalone, cluster==3)
+cluster3 <- select(cluster3, -cluster)
+
+#set train y test
+set.seed(114041)
+rows.seq <- seq(1,dim(cluster3)[1])
+train.rows <- sample(rows.seq, dim(cluster3)[1]*.75, replace=F)
+
+train.data <- cluster3[train.rows, ]
+test.data <- cluster3[-train.rows, ]
+
+cluster3 <- ctree(sex ~ .,data=train.data)
+plot(cluster3,type="simple")
+
+#test
+tree.test <- predict(cluster3, newdata=test.data)
+confusionMatrix(tree.test, test.data$sex)
+
+```
+
+### Árbol general
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+###################
+#arbol general
+set.seed(114041)
+rows.seq <- seq(1,dim(abalone)[1])
+train.rows <- sample(rows.seq, dim(abalone)[1]*.75, replace=F)
+
+train.data <- abalone[train.rows, ]
+test.data <- abalone[-train.rows, ]
+
+general <- ctree(sex ~ .,data=train.data)
+plot(general,type="simple")
+
+#test
+tree.test <- predict(general, newdata=test.data)
+confusionMatrix(tree.test, test.data$sex)
+
+```

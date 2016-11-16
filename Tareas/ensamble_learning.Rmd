@@ -1,0 +1,87 @@
+---
+title: "Ensamble Learning"
+author: "Omar Díaz Landa"
+date: "30 de noviembre de 2015"
+output: html_document
+---
+
+### Datos reales 
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+library(C50)
+library(randomForest)
+library(pROC)
+library(adabag)
+library(dplyr)
+library(caret)
+library(e1071)
+
+abalone <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data",header=F)
+names(abalone) <- c("sex","length","diameter","height","whole_wheight","shucked_weight","viscera_weight","shell_weight","rings")
+
+
+#set de entrenamiento y pruebas
+
+set.seed(114041)
+rows.seq <- seq(1,dim(abalone)[1])
+train.rows <- sample(rows.seq, dim(abalone)[1]*.75, replace=F)
+
+train.data <- abalone[train.rows, ]
+test.data <- abalone[-train.rows, ]
+
+table(test.data$sex)
+```
+
+### Arbol
+
+```{r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+##arbol
+#train
+tree <- C5.0.default(select(train.data, -sex), train.data$sex, trials=10,type="prob")
+summary(tree)
+
+plot(tree, trial = 10)
+
+#test
+tree.test <- predict.C5.0(tree, newdata=select(test.data, -sex),trials=10)
+#summary(tree.test)
+
+confusionMatrix(tree.test, test.data$sex)
+
+##table(observed=test.data$sex, predicted=tree.test)
+```
+
+
+### RandomForest
+Ajustamos un bosque aleatorio con la finalidad de mejorar el poder predictivo del modelo, ya que se genera un gran número árboles con bootstrap, clasificando una nueva instancia en cada uno de los árboles del bosque, y decidiendo la predicción final al combinar los resultados de todos los árboles, esto puede ser via promedio de resultados o mayoría de votos.
+
+
+```{r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#########
+## random forest
+#train
+rf <- randomForest(train.data$sex ~ ., data=train.data, ntree=500,replace=T, nodesize=7,importance=T)
+#rf$confusion
+print(rf)
+importance(rf)
+
+
+roc(train.data$sex, rf$votes[,2], plot=T, auc=T, ci=T, print.auc=T)
+
+#test
+rf_predictions <- predict(rf, newdata = test.data)
+confusionMatrix(rf_predictions, test.data$sex)
+```
+
+### Adaboost
+
+```{r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+######
+## adaboost
+boost <- boosting(sex ~ ., data=train.data, boos=T, mfinal=100,coeflearn='Breiman')
+
+boost.test <- predict(boost, newdata=test.data)
+confusionMatrix(boost.test$class, test.data$sex)
+boost.test$confusion
+boost.test$error
+```
